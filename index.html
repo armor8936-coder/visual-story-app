@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jarvis Visual Engine</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+
+        const DEFAULT_STORY = {
+            "start": {
+                id: "start",
+                text: "Welcome, Sir. The warrior stands at the gate. What shall he do?",
+                image: "https://images.unsplash.com/photo-1599408162165-433b1424ba0d?q=80&w=1000",
+                choices: [{ label: "Enter Village", next: "village" }]
+            },
+            "village": {
+                id: "village",
+                text: "The village is quiet. The Paladin trainer is nearby.",
+                image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=1000",
+                choices: [{ label: "Talk to Paladin", next: "start" }]
+            }
+        };
+
+        function App() {
+            const [story, setStory] = useState(DEFAULT_STORY);
+            const [currentSceneId, setCurrentSceneId] = useState('start');
+            const [isEditor, setIsEditor] = useState(false);
+            const scene = story[currentSceneId];
+
+            return (
+                <div className="min-h-screen bg-black text-white font-sans overflow-hidden">
+                    <div className="fixed top-0 w-full z-50 flex justify-between p-4 bg-black/60 backdrop-blur-md">
+                        <h1 className="text-cyan-400 font-bold">STORY ENGINE</h1>
+                        <button onClick={() => setIsEditor(!isEditor)} className="bg-cyan-600 px-3 py-1 rounded-full text-xs">
+                            {isEditor ? "VIEW PLAYER" : "VIEW EDITOR"}
+                        </button>
+                    </div>
+
+                    <div className="relative h-screen flex items-center justify-center p-4">
+                        <div className="absolute inset-0 bg-cover bg-center opacity-40" style={{ backgroundImage: `url(${scene.image})` }} />
+                        
+                        <div className="relative z-10 w-full max-w-md bg-black/80 border border-white/20 p-6 rounded-2xl backdrop-blur-xl">
+                            {!isEditor ? (
+                                <>
+                                    <p className="text-xl mb-6 text-center italic font-light">"{scene.text}"</p>
+                                    {scene.choices.map((c, i) => (
+                                        <button key={i} onClick={() => setCurrentSceneId(c.next)} className="w-full py-3 mb-2 bg-white/10 rounded-lg border border-white/20">
+                                            {c.label}
+                                        </button>
+                                    ))}
+                                </>
+                            ) : (
+                                <div className="text-xs space-y-2">
+                                    <p>Scene ID: {currentSceneId}</p>
+                                    <input className="w-full bg-white/10 p-2" defaultValue={scene.image} />
+                                    <textarea className="w-full bg-white/10 p-2 h-20" defaultValue={scene.text} />
+                                    <button className="w-full bg-green-600 py-2 rounded">Save (Beta)</button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
