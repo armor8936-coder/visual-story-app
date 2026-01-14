@@ -4,68 +4,82 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jarvis Visual Engine</title>
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
+<body class="bg-black text-white">
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState } = React;
 
-        const DEFAULT_STORY = {
+        const STORY = {
             "start": {
-                id: "start",
-                text: "Welcome, Sir. The warrior stands at the gate. What shall he do?",
-                image: "https://images.unsplash.com/photo-1599408162165-433b1424ba0d?q=80&w=1000",
-                choices: [{ label: "Enter Village", next: "village" }]
+                text: "The gates of the Silver City loom over you. A Paladin stands guard.",
+                image: "https://images.unsplash.com/photo-1599408162165-433b1424ba0d?auto=format&fit=crop&w=800",
+                choices: [{ label: "Approach Paladin", next: "paladin" }]
             },
-            "village": {
-                id: "village",
-                text: "The village is quiet. The Paladin trainer is nearby.",
-                image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=1000",
-                choices: [{ label: "Talk to Paladin", next: "start" }]
+            "paladin": {
+                text: "Paladin: 'Halt! Only heroes may enter. Will you hunt the forest goblins?'",
+                image: "https://images.unsplash.com/photo-1519074063912-ad2a609b6d47?auto=format&fit=crop&w=800",
+                choices: [
+                    { label: "Accept Quest", next: "quest_start", action: "ACCEPT_QUEST" },
+                    { label: "Refuse", next: "refused" }
+                ]
+            },
+            "quest_start": {
+                text: "The Paladin hands you a sword. 'Do not return until the task is done.'",
+                image: "https://images.unsplash.com/photo-1589492477829-5e65395b66cc?auto=format&fit=crop&w=800",
+                choices: [{ label: "Go to Forest", next: "forest" }]
+            },
+            "refused": {
+                text: "The Paladin scoffs. 'Then begone, peasant.'",
+                image: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=800",
+                choices: [{ label: "Try again", next: "start" }]
+            },
+            "forest": {
+                text: "The forest is dark. You feel the weight of the Paladin's sword in your hand.",
+                image: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=800",
+                choices: [{ label: "Hunt Goblins", next: "start" }]
             }
         };
 
         function App() {
-            const [story, setStory] = useState(DEFAULT_STORY);
-            const [currentSceneId, setCurrentSceneId] = useState('start');
-            const [isEditor, setIsEditor] = useState(false);
-            const scene = story[currentSceneId];
+            const [sceneId, setSceneId] = useState('start');
+            const [hasQuest, setHasQuest] = useState(false);
+            const scene = STORY[sceneId];
+
+            const handleChoice = (choice) => {
+                if (choice.action === "ACCEPT_QUEST") setHasQuest(true);
+                setSceneId(choice.next);
+            };
 
             return (
-                <div className="min-h-screen bg-black text-white font-sans overflow-hidden">
-                    <div className="fixed top-0 w-full z-50 flex justify-between p-4 bg-black/60 backdrop-blur-md">
-                        <h1 className="text-cyan-400 font-bold">STORY ENGINE</h1>
-                        <button onClick={() => setIsEditor(!isEditor)} className="bg-cyan-600 px-3 py-1 rounded-full text-xs">
-                            {isEditor ? "VIEW PLAYER" : "VIEW EDITOR"}
-                        </button>
+                <div className="h-screen w-full relative overflow-hidden flex flex-col justify-end p-6">
+                    <div className="absolute inset-0 bg-cover bg-center transition-all duration-1000" style={{backgroundImage: `url(${scene.image})`}}>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
                     </div>
 
-                    <div className="relative h-screen flex items-center justify-center p-4">
-                        <div className="absolute inset-0 bg-cover bg-center opacity-40" style={{ backgroundImage: `url(${scene.image})` }} />
-                        
-                        <div className="relative z-10 w-full max-w-md bg-black/80 border border-white/20 p-6 rounded-2xl backdrop-blur-xl">
-                            {!isEditor ? (
-                                <>
-                                    <p className="text-xl mb-6 text-center italic font-light">"{scene.text}"</p>
-                                    {scene.choices.map((c, i) => (
-                                        <button key={i} onClick={() => setCurrentSceneId(c.next)} className="w-full py-3 mb-2 bg-white/10 rounded-lg border border-white/20">
-                                            {c.label}
-                                        </button>
-                                    ))}
-                                </>
-                            ) : (
-                                <div className="text-xs space-y-2">
-                                    <p>Scene ID: {currentSceneId}</p>
-                                    <input className="w-full bg-white/10 p-2" defaultValue={scene.image} />
-                                    <textarea className="w-full bg-white/10 p-2 h-20" defaultValue={scene.text} />
-                                    <button className="w-full bg-green-600 py-2 rounded">Save (Beta)</button>
-                                </div>
-                            )}
+                    <div className="relative z-10 w-full max-w-lg mx-auto space-y-4">
+                        {/* Quest Badge */}
+                        {hasQuest && (
+                            <div className="inline-block px-3 py-1 bg-amber-500/20 border border-amber-500 text-amber-500 text-[10px] font-bold rounded-full animate-pulse uppercase">
+                                Active Quest: Goblin Hunt
+                            </div>
+                        )}
+
+                        <div className="bg-white/10 backdrop-blur-xl border border-white/20 p-6 rounded-3xl shadow-2xl">
+                            <p className="text-xl font-light mb-6">"{scene.text}"</p>
+                            <div className="space-y-3">
+                                {scene.choices.map((c, i) => (
+                                    <button key={i} onClick={() => handleChoice(c)} 
+                                            className="w-full py-4 rounded-2xl bg-white text-black font-bold active:scale-95 transition-transform">
+                                        {c.label}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </div>
