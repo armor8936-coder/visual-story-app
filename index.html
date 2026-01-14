@@ -3,85 +3,167 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jarvis Visual Engine</title>
+    <title>Jarvis Story Architect</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #050505; }
+        .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .active-scene { border-color: #22d3ee; background: rgba(34, 211, 238, 0.1); color: #22d3ee; }
+    </style>
 </head>
-<body class="bg-black text-white">
+<body class="text-slate-200">
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState } = React;
+        const { useState, useEffect } = React;
 
-        const STORY = {
-            "start": {
-                text: "The gates of the Silver City loom over you. A Paladin stands guard.",
-                image: "https://images.unsplash.com/photo-1599408162165-433b1424ba0d?auto=format&fit=crop&w=800",
-                choices: [{ label: "Approach Paladin", next: "paladin" }]
-            },
-            "paladin": {
-                text: "Paladin: 'Halt! Only heroes may enter. Will you hunt the forest goblins?'",
-                image: "https://images.unsplash.com/photo-1519074063912-ad2a609b6d47?auto=format&fit=crop&w=800",
-                choices: [
-                    { label: "Accept Quest", next: "quest_start", action: "ACCEPT_QUEST" },
-                    { label: "Refuse", next: "refused" }
-                ]
-            },
-            "quest_start": {
-                text: "The Paladin hands you a sword. 'Do not return until the task is done.'",
-                image: "https://images.unsplash.com/photo-1589492477829-5e65395b66cc?auto=format&fit=crop&w=800",
-                choices: [{ label: "Go to Forest", next: "forest" }]
-            },
-            "refused": {
-                text: "The Paladin scoffs. 'Then begone, peasant.'",
-                image: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=800",
-                choices: [{ label: "Try again", next: "start" }]
-            },
-            "forest": {
-                text: "The forest is dark. You feel the weight of the Paladin's sword in your hand.",
-                image: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=800",
-                choices: [{ label: "Hunt Goblins", next: "start" }]
-            }
-        };
+        const INITIAL_DATA = [
+            { id: "start", text: "Welcome to the Architect. Edit this scene to begin your story.", image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000", choices: [] }
+        ];
 
         function App() {
-            const [sceneId, setSceneId] = useState('start');
-            const [hasQuest, setHasQuest] = useState(false);
-            const scene = STORY[sceneId];
+            // Load from LocalStorage or use default
+            const [scenes, setScenes] = useState(() => {
+                const saved = localStorage.getItem('jarvis_story_data');
+                return saved ? JSON.parse(saved) : INITIAL_DATA;
+            });
 
-            const handleChoice = (choice) => {
-                if (choice.action === "ACCEPT_QUEST") setHasQuest(true);
-                setSceneId(choice.next);
+            const [activeId, setActiveId] = useState("start");
+            const [mode, setMode] = useState("edit"); // "edit" or "play"
+
+            // Auto-save whenever scenes change
+            useEffect(() => {
+                localStorage.setItem('jarvis_story_data', JSON.stringify(scenes));
+            }, [scenes]);
+
+            const activeScene = scenes.find(s => s.id === activeId) || scenes[0];
+
+            const updateActiveScene = (field, value) => {
+                setScenes(scenes.map(s => s.id === activeId ? { ...s, [field]: value } : s));
+            };
+
+            const addNewScene = () => {
+                const id = prompt("Enter Unique Scene ID (e.g., 'forest_2'):");
+                if (id && !scenes.find(s => s.id === id)) {
+                    const newScene = { id, text: "New scene text...", image: "", choices: [] };
+                    setScenes([...scenes, newScene]);
+                    setActiveId(id);
+                } else {
+                    alert("ID missing or already exists, Sir.");
+                }
+            };
+
+            const addChoice = () => {
+                const label = prompt("Button Label:");
+                const next = prompt("Target Scene ID:");
+                if (label && next) {
+                    const updatedChoices = [...activeScene.choices, { label, next }];
+                    updateActiveScene('choices', updatedChoices);
+                }
+            };
+
+            const deleteChoice = (index) => {
+                const updatedChoices = activeScene.choices.filter((_, i) => i !== index);
+                updateActiveScene('choices', updatedChoices);
             };
 
             return (
-                <div className="h-screen w-full relative overflow-hidden flex flex-col justify-end p-6">
-                    <div className="absolute inset-0 bg-cover bg-center transition-all duration-1000" style={{backgroundImage: `url(${scene.image})`}}>
-                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-                    </div>
+                <div className="min-h-screen flex flex-col overflow-hidden">
+                    {/* Header */}
+                    <header className="p-4 glass flex justify-between items-center z-50">
+                        <div>
+                            <h1 className="text-cyan-400 font-bold tracking-tighter text-lg">STORY ARCHITECT</h1>
+                            <p className="text-[10px] text-slate-500 uppercase tracking-widest">Engine Mode: {mode.toUpperCase()}</p>
+                        </div>
+                        <div className="flex gap-2">
+                            <button onClick={() => setMode(mode === "edit" ? "play" : "edit")} 
+                                    className="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-full text-xs font-bold transition-all shadow-lg shadow-cyan-900/40">
+                                {mode === "edit" ? "▶ RUN STORY" : "🛠 STOP & EDIT"}
+                            </button>
+                        </div>
+                    </header>
 
-                    <div className="relative z-10 w-full max-w-lg mx-auto space-y-4">
-                        {/* Quest Badge */}
-                        {hasQuest && (
-                            <div className="inline-block px-3 py-1 bg-amber-500/20 border border-amber-500 text-amber-500 text-[10px] font-bold rounded-full animate-pulse uppercase">
-                                Active Quest: Goblin Hunt
-                            </div>
-                        )}
-
-                        <div className="bg-white/10 backdrop-blur-xl border border-white/20 p-6 rounded-3xl shadow-2xl">
-                            <p className="text-xl font-light mb-6">"{scene.text}"</p>
-                            <div className="space-y-3">
-                                {scene.choices.map((c, i) => (
-                                    <button key={i} onClick={() => handleChoice(c)} 
-                                            className="w-full py-4 rounded-2xl bg-white text-black font-bold active:scale-95 transition-transform">
-                                        {c.label}
+                    {mode === "edit" ? (
+                        <main className="flex-1 flex flex-col md:flex-row overflow-hidden">
+                            {/* Sidebar: Scene Management */}
+                            <aside className="w-full md:w-64 glass p-4 overflow-y-auto border-t md:border-t-0 md:border-r">
+                                <h2 className="text-[10px] text-slate-500 font-bold uppercase mb-4">Project Scenes</h2>
+                                <div className="space-y-2">
+                                    {scenes.map(s => (
+                                        <button key={s.id} onClick={() => setActiveId(s.id)} 
+                                                className={`w-full text-left p-3 rounded-xl text-sm border transition-all ${activeId === s.id ? 'active-scene' : 'border-white/5 hover:bg-white/5'}`}>
+                                            <span className="text-[10px] opacity-40 block">ID: {s.id}</span>
+                                            {s.text.substring(0, 15)}...
+                                        </button>
+                                    ))}
+                                    <button onClick={addNewScene} className="w-full p-3 rounded-xl border border-dashed border-white/20 text-slate-500 text-sm hover:text-white transition-colors">
+                                        + New Scene
                                     </button>
-                                ))}
+                                </div>
+                            </aside>
+
+                            {/* Editor Area */}
+                            <section className="flex-1 p-6 overflow-y-auto space-y-6">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] text-slate-500 uppercase font-bold">Background URL (Image/GIF)</label>
+                                    <input value={activeScene.image} onChange={(e) => updateActiveScene('image', e.target.value)}
+                                           className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl focus:border-cyan-500 focus:outline-none transition-colors"
+                                           placeholder="https://... (Supports Unsplash, Pinterest, etc.)" />
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-[10px] text-slate-500 uppercase font-bold">Dialogue Content</label>
+                                    <textarea value={activeScene.text} onChange={(e) => updateActiveScene('text', e.target.value)}
+                                              className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl h-40 focus:border-cyan-500 focus:outline-none transition-colors"
+                                              placeholder="Write what the player sees..." />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] text-slate-500 uppercase font-bold">Interaction Logic</label>
+                                    <div className="grid grid-cols-1 gap-2">
+                                        {activeScene.choices.map((c, i) => (
+                                            <div key={i} className="flex items-center gap-2 bg-white/5 p-3 rounded-xl border border-white/10 text-xs">
+                                                <span className="flex-1">"{c.label}" ➔ <strong>{c.next}</strong></span>
+                                                <button onClick={() => deleteChoice(i)} className="text-red-400 font-bold px-2">X</button>
+                                            </div>
+                                        ))}
+                                        <button onClick={addChoice} className="w-full py-3 bg-cyan-900/20 border border-cyan-500/30 text-cyan-400 rounded-xl text-xs font-bold hover:bg-cyan-900/40 transition-all">
+                                            + ADD INTERACTION BUTTON
+                                        </button>
+                                    </div>
+                                </div>
+                            </section>
+                        </main>
+                    ) : (
+                        /* Player Engine */
+                        <div className="flex-1 relative flex items-center justify-center p-6">
+                            <div className="absolute inset-0 bg-cover bg-center transition-all duration-700" 
+                                 style={{ backgroundImage: `url(${activeScene.image})` }}>
+                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+                            </div>
+
+                            <div className="relative z-10 w-full max-w-xl glass p-8 rounded-[40px] shadow-2xl text-center">
+                                <p className="text-xl md:text-2xl font-light mb-10 italic leading-relaxed">"{activeScene.text}"</p>
+                                <div className="space-y-3">
+                                    {activeScene.choices.map((c, i) => (
+                                        <button key={i} onClick={() => setActiveId(c.next)}
+                                                className="w-full py-4 bg-white text-black rounded-2xl font-bold text-lg active:scale-95 transition-all shadow-xl">
+                                            {c.label}
+                                        </button>
+                                    ))}
+                                    {activeScene.choices.length === 0 && (
+                                        <button onClick={() => setActiveId("start")} className="text-cyan-500 text-sm font-bold uppercase tracking-widest animate-pulse">
+                                            [ Reset Story ]
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             );
         }
