@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jarvis Story Architect v1.1</title>
+    <title>Jarvis Story Architect v1.2</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #050505; color: #e2e8f0; }
-        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        body { font-family: 'Inter', sans-serif; background-color: #050505; color: #e2e8f0; margin: 0; overflow: hidden; }
+        .glass { background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
         .active-scene { border-color: #22d3ee; background: rgba(34, 211, 238, 0.1); color: #22d3ee; }
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        /* Smooth transition for backgrounds */
+        .bg-transition { transition: background-image 0.8s ease-in-out; }
     </style>
 </head>
 <body>
@@ -24,12 +24,12 @@
         const { useState, useEffect } = React;
 
         const INITIAL_DATA = [
-            { id: "start", text: "Welcome, Sir. Use the panel to the right to edit this scene.", image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000", choices: [] }
+            { id: "start", text: "The screen is clear, Sir. Your story begins here.", image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000", choices: [] }
         ];
 
         function App() {
             const [scenes, setScenes] = useState(() => {
-                const saved = localStorage.getItem('jarvis_story_v1.1');
+                const saved = localStorage.getItem('jarvis_story_v1.2');
                 return saved ? JSON.parse(saved) : INITIAL_DATA;
             });
 
@@ -37,33 +37,30 @@
             const [mode, setMode] = useState("edit");
 
             useEffect(() => {
-                localStorage.setItem('jarvis_story_v1.1', JSON.stringify(scenes));
+                localStorage.setItem('jarvis_story_v1.2', JSON.stringify(scenes));
             }, [scenes]);
 
             const activeScene = scenes.find(s => s.id === activeId) || scenes[0];
 
-            // RENAME LOGIC: Updates the ID and all references to it
+            const resetProject = () => {
+                if (confirm("WARNING: This will permanently delete your entire story. Proceed?")) {
+                    setScenes(INITIAL_DATA);
+                    setActiveId("start");
+                    localStorage.removeItem('jarvis_story_v1.2');
+                }
+            };
+
             const renameSceneId = (newId) => {
                 if (!newId || newId === activeId) return;
-                if (scenes.find(s => s.id === newId)) {
-                    alert("That ID already exists, Sir.");
-                    return;
-                }
-
-                const updatedScenes = scenes.map(s => {
-                    // Update the scene itself
-                    let sceneCopy = { ...s };
-                    if (s.id === activeId) sceneCopy.id = newId;
-
-                    // Update any buttons pointing to the old ID
-                    sceneCopy.choices = s.choices.map(c => 
-                        c.next === activeId ? { ...c, next: newId } : c
-                    );
-                    
-                    return sceneCopy;
+                if (scenes.find(s => s.id === newId)) return alert("ID exists.");
+                
+                const updated = scenes.map(s => {
+                    let sc = { ...s };
+                    if (s.id === activeId) sc.id = newId;
+                    sc.choices = s.choices.map(c => c.next === activeId ? { ...c, next: newId } : c);
+                    return sc;
                 });
-
-                setScenes(updatedScenes);
+                setScenes(updated);
                 setActiveId(newId);
             };
 
@@ -71,116 +68,107 @@
                 setScenes(scenes.map(s => s.id === activeId ? { ...s, [field]: value } : s));
             };
 
-            const addNewScene = () => {
-                const id = `scene_${Date.now().toString().slice(-4)}`;
-                setScenes([...scenes, { id, text: "Write something...", image: "", choices: [] }]);
-                setActiveId(id);
-            };
-
-            const addChoice = () => {
-                const label = prompt("Button Text:");
-                const target = prompt("Target Scene ID:", scenes[0].id);
-                if (label && target) {
-                    updateField('choices', [...activeScene.choices, { label, next: target }]);
-                }
-            };
-
-            const deleteScene = () => {
-                if (scenes.length <= 1) return alert("Cannot delete the only scene.");
-                if (confirm(`Delete ${activeId}?`)) {
-                    const newScenes = scenes.filter(s => s.id !== activeId);
-                    setScenes(newScenes);
-                    setActiveId(newScenes[0].id);
-                }
-            };
-
             return (
-                <div className="h-screen flex flex-col overflow-hidden">
-                    <header className="p-4 glass flex justify-between items-center z-50">
-                        <div>
-                            <h1 className="text-cyan-400 font-bold tracking-tighter">STORY ARCHITECT</h1>
-                            <p className="text-[10px] opacity-50 uppercase tracking-widest">Active: {activeId}</p>
+                <div className="h-screen flex flex-col">
+                    <header className="p-3 bg-black/80 border-b border-white/10 flex justify-between items-center z-50">
+                        <div className="flex items-center gap-4">
+                            <h1 className="text-cyan-400 font-bold text-sm tracking-tighter">ARCHITECT v1.2</h1>
+                            {mode === "edit" && (
+                                <button onClick={resetProject} className="text-[10px] bg-red-900/30 text-red-500 border border-red-900/50 px-3 py-1 rounded-full uppercase font-bold hover:bg-red-500 hover:text-white transition-all">
+                                    Reset Project
+                                </button>
+                            )}
                         </div>
                         <button onClick={() => setMode(mode === "edit" ? "play" : "edit")} 
-                                className="bg-cyan-600 hover:bg-cyan-500 px-6 py-2 rounded-full text-xs font-bold transition-all shadow-lg">
-                            {mode === "edit" ? "▶ RUN STORY" : "🛠 STOP & EDIT"}
+                                className="bg-cyan-600 px-5 py-2 rounded-full text-xs font-bold shadow-lg">
+                            {mode === "edit" ? "▶ RUN" : "🛠 EDIT"}
                         </button>
                     </header>
 
                     {mode === "edit" ? (
                         <main className="flex-1 flex overflow-hidden">
-                            {/* Scene Sidebar */}
-                            <aside className="w-24 md:w-64 glass overflow-y-auto border-r border-white/10 p-2">
-                                <button onClick={addNewScene} className="w-full mb-4 p-3 rounded-xl border border-dashed border-cyan-500/50 text-cyan-400 text-xs font-bold">+ NEW</button>
+                            <aside className="w-20 md:w-64 bg-black/40 border-r border-white/10 overflow-y-auto p-2">
+                                <button onClick={() => {
+                                    const id = `scene_${Date.now().toString().slice(-4)}`;
+                                    setScenes([...scenes, { id, text: "Dialogue...", image: "", choices: [] }]);
+                                    setActiveId(id);
+                                }} className="w-full mb-4 py-2 border border-dashed border-cyan-500/50 text-cyan-400 text-[10px] font-bold">+ NEW</button>
                                 {scenes.map(s => (
                                     <div key={s.id} onClick={() => setActiveId(s.id)} 
-                                         className={`p-3 rounded-xl cursor-pointer mb-2 transition-all ${activeId === s.id ? 'active-scene' : 'hover:bg-white/5 border border-transparent'}`}>
+                                         className={`p-2 rounded-lg cursor-pointer mb-1 border transition-all ${activeId === s.id ? 'active-scene' : 'border-transparent text-slate-500'}`}>
                                         <p className="text-[10px] font-bold truncate uppercase">{s.id}</p>
                                     </div>
                                 ))}
                             </aside>
 
-                            {/* Editor Form */}
-                            <section className="flex-1 p-6 overflow-y-auto space-y-6">
+                            <section className="flex-1 p-4 overflow-y-auto space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-1">
-                                        <label className="text-[10px] text-slate-500 font-bold uppercase">Scene ID (Unique Name)</label>
+                                        <label className="text-[10px] text-slate-500 uppercase">ID</label>
                                         <div className="flex gap-2">
-                                            <input value={activeId} 
-                                                   onChange={(e) => {/* UI handled via button */}} 
-                                                   readOnly
-                                                   className="flex-1 bg-white/5 border border-white/10 p-3 rounded-xl text-sm opacity-60" />
-                                            <button onClick={() => renameSceneId(prompt("Enter new ID:", activeId))} 
-                                                    className="bg-white/10 px-3 rounded-xl text-xs hover:bg-white/20 transition-all">RENAME</button>
+                                            <input value={activeId} readOnly className="flex-1 bg-white/5 border border-white/10 p-2 rounded-lg text-xs opacity-50" />
+                                            <button onClick={() => renameSceneId(prompt("New ID:", activeId))} className="bg-white/10 px-3 rounded-lg text-[10px]">RENAME</button>
                                         </div>
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="text-[10px] text-slate-500 font-bold uppercase">Background Link</label>
+                                        <label className="text-[10px] text-slate-500 uppercase">Media URL</label>
                                         <input value={activeScene.image} onChange={(e) => updateField('image', e.target.value)}
-                                               className="w-full bg-white/5 border border-white/10 p-3 rounded-xl text-sm focus:border-cyan-500 focus:outline-none" 
-                                               placeholder="Pinterest/Unsplash Link..." />
+                                               className="w-full bg-white/5 border border-white/10 p-2 rounded-lg text-xs" placeholder="Pinterest Link..." />
                                     </div>
                                 </div>
-
                                 <div className="space-y-1">
-                                    <label className="text-[10px] text-slate-500 font-bold uppercase">Dialogue / Description</label>
+                                    <label className="text-[10px] text-slate-500 uppercase">Dialogue</label>
                                     <textarea value={activeScene.text} onChange={(e) => updateField('text', e.target.value)}
-                                              className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl h-40 focus:border-cyan-500 focus:outline-none transition-colors" />
+                                              className="w-full bg-white/5 border border-white/10 p-3 rounded-xl h-32 text-sm" />
                                 </div>
-
                                 <div className="space-y-2">
-                                    <label className="text-[10px] text-slate-500 font-bold uppercase">Buttons (Interaction)</label>
-                                    <div className="grid gap-2">
-                                        {activeScene.choices.map((c, i) => (
-                                            <div key={i} className="flex gap-2 items-center bg-white/5 p-3 rounded-xl border border-white/10">
-                                                <span className="flex-1 text-sm font-light leading-none">"{c.label}" ➔ <span className="text-cyan-400 font-bold">{c.next}</span></span>
-                                                <button onClick={() => updateField('choices', activeScene.choices.filter((_, idx) => idx !== i))} 
-                                                        className="text-red-500 p-2">✕</button>
-                                            </div>
-                                        ))}
-                                        <button onClick={addChoice} className="w-full py-3 bg-cyan-900/20 border border-cyan-500/30 text-cyan-400 rounded-xl text-[10px] font-bold tracking-widest hover:bg-cyan-900/40">+ ADD INTERACTION</button>
-                                    </div>
+                                    <label className="text-[10px] text-slate-500 uppercase">Choices</label>
+                                    {activeScene.choices.map((c, i) => (
+                                        <div key={i} className="flex gap-2 bg-white/5 p-2 rounded-lg border border-white/10 text-xs items-center">
+                                            <span className="flex-1 truncate">"{c.label}" ➔ {c.next}</span>
+                                            <button onClick={() => updateField('choices', activeScene.choices.filter((_, idx) => idx !== i))} className="text-red-500">✕</button>
+                                        </div>
+                                    ))}
+                                    <button onClick={() => {
+                                        const label = prompt("Button Label:");
+                                        const next = prompt("Target ID:");
+                                        if (label && next) updateField('choices', [...activeScene.choices, { label, next }]);
+                                    }} className="w-full py-2 bg-cyan-900/20 text-cyan-400 border border-cyan-500/20 rounded-lg text-[10px] font-bold uppercase tracking-widest">+ Add Choice</button>
                                 </div>
-
-                                <button onClick={deleteScene} className="text-red-900 hover:text-red-500 text-[10px] font-bold uppercase transition-colors">Delete This Scene</button>
                             </section>
                         </main>
                     ) : (
-                        /* Player Engine */
-                        <div className="flex-1 relative flex items-center justify-center p-6">
-                            <div className="absolute inset-0 bg-cover bg-center transition-all duration-700" style={{ backgroundImage: `url(${activeScene.image})` }}>
-                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+                        /* CINEMATIC PLAYER */
+                        <div className="flex-1 relative flex flex-col justify-end">
+                            <div className="absolute inset-0 bg-cover bg-center bg-transition" 
+                                 style={{ backgroundImage: `url(${activeScene.image})` }}>
+                                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
                             </div>
-                            <div className="relative z-10 w-full max-w-xl glass p-8 rounded-[40px] text-center">
-                                <p className="text-xl font-light mb-10 italic leading-relaxed">"{activeScene.text}"</p>
-                                <div className="space-y-3">
-                                    {activeScene.choices.map((c, i) => (
-                                        <button key={i} onClick={() => setActiveId(c.next)}
-                                                className="w-full py-4 bg-white text-black rounded-2xl font-bold text-lg active:scale-95 transition-all shadow-xl">
-                                            {c.label}
-                                        </button>
-                                    ))}
-                                    {activeScene.choices.length === 0 && <button onClick={() => setActiveId(scenes[0].id)} className="text-cyan-500 text-xs font-bold uppercase">[ RESTART ]</button>}
+
+                            {/* Dialogue & Interaction Layer (Bottom 1/3 of screen) */}
+                            <div className="relative z-10 w-full p-6 pb-12 bg-gradient-to-t from-black via-black/70 to-transparent">
+                                <div className="max-w-2xl mx-auto space-y-6">
+                                    {/* Small, sleek dialogue box */}
+                                    <div className="text-center px-4">
+                                        <p className="text-lg md:text-xl font-light text-white drop-shadow-lg italic leading-snug">
+                                            {activeScene.text}
+                                        </p>
+                                    </div>
+
+                                    {/* Interaction Buttons - Compact grid */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {activeScene.choices.map((c, i) => (
+                                            <button key={i} onClick={() => setActiveId(c.next)}
+                                                    className="py-3 px-6 glass text-white rounded-xl text-sm font-medium hover:bg-white/20 active:scale-95 transition-all">
+                                                {c.label}
+                                            </button>
+                                        ))}
+                                        {activeScene.choices.length === 0 && (
+                                            <button onClick={() => setActiveId(scenes[0].id)} className="w-full py-2 text-cyan-500 text-[10px] font-bold uppercase tracking-[0.2em]">
+                                                [ End of Sequence - Restart ]
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
