@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jarvis Architect v1.3 - Media Edition</title>
+    <title>Jarvis Architect v1.4 - Academy</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -11,91 +11,90 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700&display=swap');
         body { font-family: 'Inter', sans-serif; background: #050505; color: #e2e8f0; margin: 0; overflow: hidden; }
-        .glass { background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .glass { background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
         .active-scene { border-color: #22d3ee; background: rgba(34, 211, 238, 0.1); color: #22d3ee; }
-        .drop-zone { border: 2px dashed rgba(34, 211, 238, 0.3); transition: all 0.3s; }
-        .drop-zone:hover { border-color: #22d3ee; background: rgba(34, 211, 238, 0.05); }
+        .tutorial-step { border-left: 2px solid #22d3ee; padding-left: 1rem; margin-bottom: 1.5rem; }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+        const { useState, useEffect } = React;
 
         const INITIAL_DATA = [
-            { id: "start", text: "Welcome. Drop a photo or video here to begin.", image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000", isVideo: false, choices: [] }
+            { id: "start", text: "The gate is locked. A sign says: 'Only those who know the link may pass.'", image: "https://images.unsplash.com/photo-1519074063912-ad2a609b6d47?q=80&w=1000", isVideo: false, choices: [{label: "Look for link", next: "tutorial"}] },
+            { id: "tutorial", text: "Welcome to the Academy. Step 1: Find an image on Pinterest. Step 2: Right-click > Copy Image Address. Step 3: Paste it in the Media URL box.", image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1000", isVideo: false, choices: [{label: "I understand", next: "start"}] }
         ];
 
         function App() {
             const [scenes, setScenes] = useState(() => {
-                const saved = localStorage.getItem('jarvis_story_v1.3');
+                const saved = localStorage.getItem('jarvis_story_v1.4');
                 return saved ? JSON.parse(saved) : INITIAL_DATA;
             });
             const [activeId, setActiveId] = useState("start");
             const [mode, setMode] = useState("edit");
-            const fileInputRef = useRef(null);
+            const [showHelp, setShowHelp] = useState(false);
 
             useEffect(() => {
-                localStorage.setItem('jarvis_story_v1.3', JSON.stringify(scenes));
+                localStorage.setItem('jarvis_story_v1.4', JSON.stringify(scenes));
             }, [scenes]);
 
             const activeScene = scenes.find(s => s.id === activeId) || scenes[0];
 
-            // --- FILE HANDLING LOGIC ---
-            const handleFileUpload = (file) => {
-                if (!file) return;
-                const isVideo = file.type.startsWith('video/');
-                const url = URL.createObjectURL(file); // Temporary browser link
-                
-                updateField('image', url);
-                updateField('isVideo', isVideo);
-            };
-
-            const onDrop = (e) => {
-                e.preventDefault();
-                const file = e.dataTransfer.files[0];
-                handleFileUpload(file);
-            };
-
-            // --- ENGINE LOGIC ---
             const updateField = (field, value) => {
                 setScenes(scenes.map(s => s.id === activeId ? { ...s, [field]: value } : s));
             };
 
-            const renameSceneId = (newId) => {
-                if (!newId || newId === activeId || scenes.find(s => s.id === newId)) return;
-                const updated = scenes.map(s => {
-                    let sc = { ...s };
-                    if (s.id === activeId) sc.id = newId;
-                    sc.choices = s.choices.map(c => c.next === activeId ? { ...c, next: newId } : c);
-                    return sc;
-                });
-                setScenes(updated);
-                setActiveId(newId);
-            };
-
             return (
-                <div className="h-screen flex flex-col overflow-hidden" onDragOver={(e) => e.preventDefault()} onDrop={onDrop}>
+                <div className="h-screen flex flex-col overflow-hidden">
+                    {/* Header */}
                     <header className="p-3 bg-black border-b border-white/10 flex justify-between items-center z-50">
-                        <div className="flex items-center gap-4">
-                            <h1 className="text-cyan-400 font-bold text-xs tracking-widest">ARCHITECT 1.3</h1>
-                            {mode === "edit" && (
-                                <button onClick={() => confirm("Reset all?") && setScenes(INITIAL_DATA)} className="text-[9px] text-red-500 border border-red-900/30 px-2 py-1 rounded uppercase">Reset</button>
-                            )}
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-cyan-400 font-bold text-xs tracking-widest">ARCHITECT v1.4</h1>
+                            <button onClick={() => setShowHelp(true)} className="bg-white/5 text-white/50 border border-white/10 rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold hover:text-cyan-400 hover:border-cyan-400 transition-all">?</button>
                         </div>
-                        <button onClick={() => setMode(mode === "edit" ? "play" : "edit")} className="bg-cyan-600 px-6 py-2 rounded-full text-xs font-bold shadow-lg shadow-cyan-900/20 transition-transform active:scale-95">
-                            {mode === "edit" ? "▶ RUN STORY" : "🛠 EXIT PLAYER"}
-                        </button>
+                        <div className="flex gap-2">
+                            {mode === "edit" && (
+                                <button onClick={() => confirm("Wipe everything?") && setScenes(INITIAL_DATA)} className="text-[9px] text-red-500 uppercase px-2 font-bold">Reset</button>
+                            )}
+                            <button onClick={() => setMode(mode === "edit" ? "play" : "edit")} className="bg-cyan-600 px-6 py-2 rounded-full text-xs font-bold shadow-lg shadow-cyan-900/20 active:scale-95 transition-all">
+                                {mode === "edit" ? "▶ RUN STORY" : "🛠 EXIT PLAYER"}
+                            </button>
+                        </div>
                     </header>
+
+                    {/* Academy / Help Overlay */}
+                    {showHelp && (
+                        <div className="fixed inset-0 z-[100] glass p-8 flex flex-col justify-center overflow-y-auto">
+                            <div className="max-w-xl mx-auto space-y-6">
+                                <h2 className="text-2xl font-bold text-cyan-400">How to build your game:</h2>
+                                <div className="space-y-4">
+                                    <div className="tutorial-step">
+                                        <h3 className="text-sm font-bold text-white uppercase tracking-wider">1. The Visuals</h3>
+                                        <p className="text-xs text-slate-400">Go to Pinterest. Open a Pin. Long-press the image and select <b>"Copy Image Address"</b>. Paste that into the 'Media URL'. Use .mp4 links for videos!</p>
+                                    </div>
+                                    <div className="tutorial-step">
+                                        <h3 className="text-sm font-bold text-white uppercase tracking-wider">2. The Branching</h3>
+                                        <p className="text-xs text-slate-400">Click '+ Add Interaction'. Give it a label (e.g. 'Enter Cave') and a Target ID (e.g. 'cave_interior').</p>
+                                    </div>
+                                    <div className="tutorial-step">
+                                        <h3 className="text-sm font-bold text-white uppercase tracking-wider">3. The Linking</h3>
+                                        <p className="text-xs text-slate-400">Create the next scene with the ID you just used ('cave_interior'). The engine will now link them automatically!</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setShowHelp(false)} className="w-full py-4 bg-cyan-600 text-white rounded-2xl font-bold">START CREATING</button>
+                            </div>
+                        </div>
+                    )}
 
                     {mode === "edit" ? (
                         <main className="flex-1 flex overflow-hidden">
-                            {/* Sidebar */}
+                            {/* Scene Sidebar */}
                             <aside className="w-20 md:w-64 bg-black/40 border-r border-white/10 overflow-y-auto p-2">
                                 <button onClick={() => {
                                     const id = `scene_${Date.now().toString().slice(-4)}`;
-                                    setScenes([...scenes, { id, text: "Dialogue...", image: "", isVideo: false, choices: [] }]);
+                                    setScenes([...scenes, { id, text: "Describe the action...", image: "", isVideo: false, choices: [] }]);
                                     setActiveId(id);
                                 }} className="w-full mb-4 py-2 border border-dashed border-cyan-500/50 text-cyan-400 text-[10px] font-bold">+ NEW SCENE</button>
                                 {scenes.map(s => (
@@ -105,97 +104,69 @@
                                 ))}
                             </aside>
 
-                            {/* Editor Form */}
+                            {/* Editor Panel */}
                             <section className="flex-1 p-4 md:p-8 overflow-y-auto space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-4">
-                                        <div className="space-y-1">
-                                            <label className="text-[10px] text-slate-500 font-bold uppercase">Identity</label>
-                                            <div className="flex gap-2">
-                                                <input value={activeId} readOnly className="flex-1 bg-white/5 border border-white/10 p-2 rounded-lg text-xs opacity-50" />
-                                                <button onClick={() => renameSceneId(prompt("New ID:", activeId))} className="bg-white/10 px-3 rounded-lg text-[10px]">RENAME</button>
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-1">
-                                            <label className="text-[10px] text-slate-500 font-bold uppercase">Media Source (Drag & Drop or Paste Link)</label>
-                                            <div 
-                                                onClick={() => fileInputRef.current.click()}
-                                                className="drop-zone rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer text-center"
-                                            >
-                                                <p className="text-xs text-slate-400">Click to upload or drag files here</p>
-                                                <p className="text-[9px] text-cyan-500/50 mt-1">Supports JPG, PNG, MP4, WEBM</p>
-                                                <input type="file" ref={fileInputRef} hidden accept="image/*,video/*" onChange={(e) => handleFileUpload(e.target.files[0])} />
-                                            </div>
-                                            <input value={activeScene.image} onChange={(e) => {
-                                                updateField('image', e.target.value);
-                                                updateField('isVideo', e.target.value.match(/\.(mp4|webm|ogg)/i));
-                                            }} className="w-full mt-2 bg-white/5 border border-white/10 p-2 rounded-lg text-xs" placeholder="Or paste Pinterest/URL link here..." />
-                                        </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Media URL (Pinterest/Unsplash)</label>
+                                        <input value={activeScene.image} onChange={(e) => {
+                                            updateField('image', e.target.value);
+                                            updateField('isVideo', e.target.value.match(/\.(mp4|webm|ogg)/i));
+                                        }} className="w-full bg-white/5 border border-white/10 p-3 rounded-xl text-xs" placeholder="Paste image/video address..." />
+                                        {activeScene.image && <p className="text-[9px] text-cyan-400/50 uppercase">Type: {activeScene.isVideo ? 'Video' : 'Image'}</p>}
                                     </div>
-
-                                    <div className="space-y-4">
-                                        <div className="space-y-1">
-                                            <label className="text-[10px] text-slate-500 font-bold uppercase">Narrative Text</label>
-                                            <textarea value={activeScene.text} onChange={(e) => updateField('text', e.target.value)} className="w-full bg-white/5 border border-white/10 p-4 rounded-xl h-40 text-sm focus:border-cyan-500 outline-none" />
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] text-slate-500 font-bold uppercase">Branching Choices</label>
-                                            {activeScene.choices.map((c, i) => (
-                                                <div key={i} className="flex gap-2 bg-white/5 p-2 rounded-lg border border-white/10 text-[11px] items-center">
-                                                    <span className="flex-1 font-mono">"{c.label}" → {c.next}</span>
-                                                    <button onClick={() => updateField('choices', activeScene.choices.filter((_, idx) => idx !== i))} className="text-red-500 px-2 font-bold">✕</button>
-                                                </div>
-                                            ))}
-                                            <button onClick={() => {
-                                                const label = prompt("Button Label:");
-                                                const next = prompt("Target Scene ID:");
-                                                if (label && next) updateField('choices', [...activeScene.choices, { label, next }]);
-                                            }} className="w-full py-2 bg-cyan-900/20 text-cyan-400 border border-cyan-500/20 rounded-lg text-[10px] font-bold uppercase tracking-widest">+ Add Interaction</button>
-                                        </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Scene ID</label>
+                                        <input value={activeId} readOnly className="w-full bg-white/5 border border-white/10 p-3 rounded-xl text-xs opacity-50" />
                                     </div>
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Dialogue / Storyline</label>
+                                    <textarea value={activeScene.text} onChange={(e) => updateField('text', e.target.value)} className="w-full bg-white/5 border border-white/10 p-4 rounded-2xl h-32 text-sm focus:border-cyan-500 outline-none" />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Interaction Buttons</label>
+                                    {activeScene.choices.map((c, i) => (
+                                        <div key={i} className="flex gap-2 bg-white/5 p-2 rounded-lg border border-white/10 text-[11px] items-center">
+                                            <span className="flex-1 font-mono">"{c.label}" → <b>{c.next}</b></span>
+                                            <button onClick={() => updateField('choices', activeScene.choices.filter((_, idx) => idx !== i))} className="text-red-500 px-2 font-bold">✕</button>
+                                        </div>
+                                    ))}
+                                    <button onClick={() => {
+                                        const label = prompt("What does the button say?");
+                                        const next = prompt("Target Scene ID (Where does it lead?):");
+                                        if (label && next) updateField('choices', [...activeScene.choices, { label, next }]);
+                                    }} className="w-full py-2 bg-cyan-900/20 text-cyan-400 border border-cyan-500/20 rounded-lg text-[10px] font-bold uppercase tracking-widest">+ Add Path</button>
                                 </div>
                             </section>
                         </main>
                     ) : (
-                        /* CINEMATIC PLAYER ENGINE */
-                        <div className="flex-1 relative flex flex-col justify-end overflow-hidden">
-                            {/* Media Layer */}
-                            <div className="absolute inset-0 bg-black flex items-center justify-center">
+                        /* Player Mode */
+                        <div className="flex-1 relative flex flex-col justify-end">
+                            <div className="absolute inset-0 bg-black">
                                 {activeScene.isVideo ? (
-                                    <video 
-                                        key={activeScene.image}
-                                        src={activeScene.image} 
-                                        autoPlay loop muted playsInline 
-                                        className="w-full h-full object-cover"
-                                    />
+                                    <video key={activeScene.image} src={activeScene.image} autoPlay loop muted playsInline className="w-full h-full object-cover" />
                                 ) : (
-                                    <img 
-                                        key={activeScene.image}
-                                        src={activeScene.image} 
-                                        className="w-full h-full object-cover transition-opacity duration-1000"
-                                    />
+                                    <img key={activeScene.image} src={activeScene.image} className="w-full h-full object-cover" />
                                 )}
                                 <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-90" />
                             </div>
 
-                            {/* Dialogue & UI Layer */}
-                            <div className="relative z-10 w-full p-6 pb-16 bg-gradient-to-t from-black via-black/60 to-transparent">
-                                <div className="max-w-xl mx-auto space-y-8">
-                                    <p className="text-xl md:text-2xl font-light text-white text-center drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)] leading-snug italic">
-                                        {activeScene.text}
+                            <div className="relative z-10 w-full p-6 pb-16 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
+                                <div className="max-w-xl mx-auto text-center space-y-6">
+                                    <p className="text-xl font-light italic text-white drop-shadow-lg leading-snug">
+                                        "{activeScene.text}"
                                     </p>
-                                    <div className="grid grid-cols-1 gap-3">
+                                    <div className="grid grid-cols-1 gap-2">
                                         {activeScene.choices.map((c, i) => (
-                                            <button key={i} onClick={() => setActiveId(c.next)} className="py-4 glass text-white rounded-2xl text-sm font-bold tracking-wide hover:bg-white/10 active:scale-95 transition-all">
+                                            <button key={i} onClick={() => setActiveId(c.next)} className="py-3 px-6 glass text-white rounded-xl text-sm font-bold hover:bg-white/10 transition-all">
                                                 {c.label}
                                             </button>
                                         ))}
                                         {activeScene.choices.length === 0 && (
-                                            <button onClick={() => setActiveId(scenes[0].id)} className="w-full py-2 text-cyan-500 text-[10px] font-bold uppercase tracking-[0.3em]">
-                                                [ Mission Complete - Restart ]
-                                            </button>
+                                            <button onClick={() => setActiveId("start")} className="text-cyan-500 text-[10px] font-bold uppercase tracking-[0.3em]">[ Reset ]</button>
                                         )}
                                     </div>
                                 </div>
