@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jarvis Architect v1.5 - Pure Engine</title>
+    <title>Jarvis Architect v1.6 - Publisher</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -21,18 +21,18 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        const BLANK_START = [{ id: "start", text: "", image: "", isVideo: false, choices: [] }];
+        const BLANK_START = [{ id: "start", text: "New Story Session...", image: "", isVideo: false, choices: [] }];
 
         function App() {
             const [scenes, setScenes] = useState(() => {
-                const saved = localStorage.getItem('jarvis_pure_arch_v1.5');
+                const saved = localStorage.getItem('jarvis_pub_arch_v1.6');
                 return saved ? JSON.parse(saved) : BLANK_START;
             });
             const [activeId, setActiveId] = useState("start");
             const [mode, setMode] = useState("edit");
 
             useEffect(() => {
-                localStorage.setItem('jarvis_pure_arch_v1.5', JSON.stringify(scenes));
+                localStorage.setItem('jarvis_pub_arch_v1.6', JSON.stringify(scenes));
             }, [scenes]);
 
             const activeScene = scenes.find(s => s.id === activeId) || scenes[0];
@@ -41,30 +41,82 @@
                 setScenes(scenes.map(s => s.id === activeId ? { ...s, [field]: value } : s));
             };
 
-            const renameSceneId = (oldId) => {
-                const newId = prompt("New Unique ID:", oldId);
-                if (!newId || newId === oldId || scenes.find(s => s.id === newId)) return;
+            // --- THE EXPORT ENGINE ---
+            const exportStandaloneHTML = () => {
+                const storyData = JSON.stringify(scenes);
+                const htmlTemplate = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A Story Created with Jarvis Architect</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"><\/script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"><\/script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"><\/script>
+    <script src="https://cdn.tailwindcss.com"><\/script>
+    <style>
+        body { font-family: sans-serif; background: #000; margin: 0; overflow: hidden; }
+        .glass { background: rgba(0,0,0,0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+    </style>
+</head>
+<body>
+    <div id="player-root"></div>
+    <script type="text/babel">
+        const story = ${storyData};
+        function Game() {
+            const [id, setId] = React.useState("start");
+            const scene = story.find(s => s.id === id) || story[0];
+            return (
+                <div className="h-screen w-full relative flex flex-col justify-end overflow-hidden">
+                    <div className="absolute inset-0">
+                        {scene.isVideo ? 
+                            <video key={scene.image} src={scene.image} autoPlay loop muted playsInline className="w-full h-full object-cover" /> :
+                            <img key={scene.image} src={scene.image} className="w-full h-full object-cover" />
+                        }
+                        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-90" />
+                    </div>
+                    <div className="relative z-10 w-full p-8 pb-16 bg-gradient-to-t from-black/80 to-transparent">
+                        <div className="max-w-2xl mx-auto text-center space-y-8">
+                            <p className="text-xl md:text-2xl font-light text-white italic leading-relaxed">{scene.text}</p>
+                            <div className="flex flex-col gap-3">
+                                {scene.choices.map((c, i) => (
+                                    <button key={i} onClick={() => setId(c.next)} className="w-full py-4 glass text-white rounded-2xl text-sm font-bold uppercase tracking-widest hover:bg-white/10 active:scale-95 transition-all">
+                                        {c.label}
+                                    </button>
+                                ))}
+                                {scene.choices.length === 0 && <button onClick={() => setId("start")} className="text-cyan-500 text-[10px] font-bold uppercase tracking-widest mt-4">Restart</button>}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+        ReactDOM.createRoot(document.getElementById('player-root')).render(<Game />);
+    <\/script>
+</body>
+</html>`;
                 
-                const updated = scenes.map(s => {
-                    let sc = { ...s };
-                    if (s.id === oldId) sc.id = newId;
-                    sc.choices = s.choices.map(c => c.next === oldId ? { ...c, next: newId } : c);
-                    return sc;
-                });
-                setScenes(updated);
-                setActiveId(newId);
+                const blob = new Blob([htmlTemplate], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `my_story_${activeId}.html`;
+                a.click();
             };
 
             return (
                 <div className="h-screen flex flex-col overflow-hidden">
-                    {/* Minimalist Header */}
                     <header className="p-3 bg-black border-b border-white/10 flex justify-between items-center z-50">
-                        <h1 className="text-cyan-400 font-bold text-[10px] tracking-[0.3em] uppercase">Architect v1.5</h1>
+                        <h1 className="text-cyan-400 font-bold text-[10px] tracking-[0.3em] uppercase">Architect v1.6</h1>
                         <div className="flex gap-4">
                             {mode === "edit" && (
-                                <button onClick={() => confirm("Wipe all data?") && setScenes(BLANK_START)} className="text-[10px] text-red-900 font-bold uppercase hover:text-red-500 transition-colors">Reset</button>
+                                <>
+                                    <button onClick={exportStandaloneHTML} className="bg-green-900/40 text-green-400 border border-green-500/30 px-4 py-1.5 rounded-full text-[10px] font-bold uppercase hover:bg-green-500 hover:text-white transition-all">Export Game</button>
+                                    <button onClick={() => confirm("Reset all?") && setScenes(BLANK_START)} className="text-[10px] text-red-900 font-bold uppercase py-1.5">Reset</button>
+                                </>
                             )}
-                            <button onClick={() => setMode(mode === "edit" ? "play" : "edit")} className="bg-white text-black px-6 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all">
+                            <button onClick={() => setMode(mode === "edit" ? "play" : "edit")} className="bg-white text-black px-6 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">
                                 {mode === "edit" ? "Run Machine" : "Exit Player"}
                             </button>
                         </div>
@@ -72,7 +124,6 @@
 
                     {mode === "edit" ? (
                         <main className="flex-1 flex overflow-hidden">
-                            {/* Sidebar */}
                             <aside className="w-20 md:w-56 bg-black border-r border-white/5 overflow-y-auto p-2">
                                 <button onClick={() => {
                                     const id = `scene_${Date.now().toString().slice(-4)}`;
@@ -86,7 +137,6 @@
                                 ))}
                             </aside>
 
-                            {/* Blank Canvas Editor */}
                             <section className="flex-1 p-6 md:p-10 overflow-y-auto space-y-8 max-w-4xl">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <div className="space-y-4">
@@ -100,64 +150,64 @@
                                         <div className="space-y-1">
                                             <label className="text-[9px] text-slate-500 font-black uppercase tracking-tighter">Scene Identity</label>
                                             <div className="flex gap-2">
-                                                <input value={activeId} readOnly className="flex-1 bg-white/5 border border-white/10 p-3 rounded-lg text-xs opacity-40 cursor-not-allowed" />
-                                                <button onClick={() => renameSceneId(activeId)} className="bg-white/10 px-4 rounded-lg text-[9px] font-bold uppercase hover:bg-white/20">Rename</button>
+                                                <input value={activeId} readOnly className="flex-1 bg-white/5 border border-white/10 p-3 rounded-lg text-xs opacity-40" />
+                                                <button onClick={() => {
+                                                    const newId = prompt("New ID:", activeId);
+                                                    if(newId && !scenes.find(s => s.id === newId)) {
+                                                        const up = scenes.map(s => {
+                                                            let sc = {...s};
+                                                            if(s.id === activeId) sc.id = newId;
+                                                            sc.choices = s.choices.map(c => c.next === activeId ? {...c, next: newId} : c);
+                                                            return sc;
+                                                        });
+                                                        setScenes(up); setActiveId(newId);
+                                                    }
+                                                }} className="bg-white/10 px-4 rounded-lg text-[9px] font-bold uppercase">Rename</button>
                                             </div>
                                         </div>
                                     </div>
-
-                                    <div className="space-y-4">
-                                        <div className="space-y-1">
-                                            <label className="text-[9px] text-slate-500 font-black uppercase tracking-tighter">Narrative Input</label>
-                                            <textarea value={activeScene.text} onChange={(e) => updateField('text', e.target.value)} className="w-full bg-white/5 border border-white/10 p-4 rounded-xl h-44 text-sm focus:border-cyan-500 outline-none resize-none" placeholder="Enter story text..." />
-                                        </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] text-slate-500 font-black uppercase tracking-tighter">Narrative Input</label>
+                                        <textarea value={activeScene.text} onChange={(e) => updateField('text', e.target.value)} className="w-full bg-white/5 border border-white/10 p-4 rounded-xl h-44 text-sm focus:border-cyan-500 outline-none resize-none" />
                                     </div>
                                 </div>
-
                                 <div className="space-y-3 pt-6 border-t border-white/5">
                                     <label className="text-[9px] text-slate-500 font-black uppercase tracking-tighter">Interaction Node Mapping</label>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                         {activeScene.choices.map((c, i) => (
                                             <div key={i} className="flex gap-2 bg-white/5 p-3 rounded-xl border border-white/10 text-[10px] items-center">
-                                                <span className="flex-1">"{c.label}" <span className="text-cyan-500">➔</span> {c.next}</span>
-                                                <button onClick={() => updateField('choices', activeScene.choices.filter((_, idx) => idx !== i))} className="text-red-900 font-bold px-2 hover:text-red-500">X</button>
+                                                <span className="flex-1">"{c.label}" ➔ {c.next}</span>
+                                                <button onClick={() => updateField('choices', activeScene.choices.filter((_, idx) => idx !== i))} className="text-red-900 font-bold px-2">X</button>
                                             </div>
                                         ))}
                                         <button onClick={() => {
                                             const label = prompt("Button Text:");
-                                            const next = prompt("Target Scene ID:");
+                                            const next = prompt("Target ID:");
                                             if (label && next) updateField('choices', [...activeScene.choices, { label, next }]);
-                                        }} className="py-3 bg-white/5 text-slate-400 border border-white/10 rounded-xl text-[9px] font-bold uppercase tracking-widest hover:border-cyan-500 hover:text-cyan-400 transition-all">+ Add Branch</button>
+                                        }} className="py-3 bg-white/5 text-slate-400 border border-white/10 rounded-xl text-[9px] font-bold uppercase tracking-widest">+ Add Branch</button>
                                     </div>
                                 </div>
                             </section>
                         </main>
                     ) : (
-                        /* Pure Output Player */
+                        /* Player Engine */
                         <div className="flex-1 relative flex flex-col justify-end overflow-hidden">
                             <div className="absolute inset-0 bg-black">
-                                {activeScene.isVideo ? (
-                                    <video key={activeScene.image} src={activeScene.image} autoPlay loop muted playsInline className="w-full h-full object-cover" />
-                                ) : (
+                                {activeScene.isVideo ? 
+                                    <video key={activeScene.image} src={activeScene.image} autoPlay loop muted playsInline className="w-full h-full object-cover" /> :
                                     <img key={activeScene.image} src={activeScene.image} className="w-full h-full object-cover" />
-                                )}
+                                }
                                 <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-90" />
                             </div>
-
-                            <div className="relative z-10 w-full p-8 pb-16 bg-gradient-to-t from-black/90 via-black/40 to-transparent">
+                            <div className="relative z-10 w-full p-8 pb-16 bg-gradient-to-t from-black/90 to-transparent">
                                 <div className="max-w-2xl mx-auto space-y-10 text-center">
-                                    <p className="text-xl md:text-2xl font-light text-white leading-relaxed tracking-tight">
-                                        {activeScene.text}
-                                    </p>
+                                    <p className="text-xl md:text-2xl font-light text-white italic leading-relaxed">{activeScene.text}</p>
                                     <div className="flex flex-col items-center gap-3">
                                         {activeScene.choices.map((c, i) => (
-                                            <button key={i} onClick={() => setActiveId(c.next)} className="w-full max-w-sm py-4 glass text-white rounded-2xl text-[11px] font-bold uppercase tracking-[0.2em] hover:bg-white/10 active:scale-95 transition-all">
+                                            <button key={i} onClick={() => setActiveId(c.next)} className="w-full max-w-sm py-4 glass text-white rounded-2xl text-[11px] font-bold uppercase tracking-widest active:scale-95 transition-all">
                                                 {c.label}
                                             </button>
                                         ))}
-                                        {activeScene.choices.length === 0 && (
-                                            <button onClick={() => setActiveId("start")} className="text-cyan-500 text-[9px] font-bold uppercase tracking-[0.5em] mt-4 opacity-50 hover:opacity-100">[ Loop to Start ]</button>
-                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -166,7 +216,6 @@
                 </div>
             );
         }
-
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
